@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clientes</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0ede8;
+    --surface: #ffffff;
+    --border: #ddd9d2;
+    --accent: #1a6b3c;
+    --accent-light: #e8f5ee;
+    --text: #18181a;
+    --muted: #8f8c87;
+    --danger: #c0392b;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 32px 16px 60px;
+    color: var(--text);
+  }
+
+  .wrapper { max-width: 480px; margin: 0 auto; }
+
+  /* HEADER */
+  header { margin-bottom: 28px; }
+
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  /* BT STATUS BAR */
+  .bt-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+
+  .bt-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background .3s;
+  }
+
+  .bt-dot.connected { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+  .bt-dot.connecting { background: #f39c12; animation: pulse 1s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+
+  .bt-label { flex: 1; color: var(--muted); }
+  .bt-label.connected { color: var(--text); font-weight: 500; }
+
+  .btn-connect {
+    padding: 5px 14px;
+    border-radius: 5px;
+    border: 1.5px solid var(--border);
+    background: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+
+  .btn-connect:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-connect.disconnect { border-color: #e8d5d3; color: var(--danger); }
+  .btn-connect.disconnect:hover { background: #fdf0ef; }
+
+  /* CLIENT LIST */
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    gap: 14px;
+    transition: box-shadow .15s;
+  }
+
+  .card:active { box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+
+  .client-code {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    min-width: 72px;
+  }
+
+  .client-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .btn-print {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .btn-print:active { transform: scale(.96); opacity: .9; }
+
+  .btn-print:disabled {
+    background: var(--border);
+    color: var(--muted);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #18181a;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--danger); }
+
+  /* NOT SUPPORTED */
+  .no-support {
+    background: #fff8e6;
+    border: 1.5px solid #f0d080;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #7a5c00;
+    margin-bottom: 20px;
+    display: none;
+    line-height: 1.6;
+  }
+
+  .debug {
+    background: #1a1a1a;
+    color: #00ff88;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    display: none;
+    max-height: 180px;
+    overflow-y: auto;
+    line-height: 1.8;
+    word-break: break-all;
+  }
+
+  .debug.show { display: block; }
+  .debug .err { color: #ff6b6b; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="eyebrow">Gestión de clientes</div>
+    <h1>Clientes</h1>
+  </header>
+
+  <div class="no-support" id="noSupport">
+    ⚠️ Tu navegador no soporta Web Bluetooth. Usa <strong>Chrome para Android</strong> para imprimir.
+  </div>
+
+  <div class="bt-bar">
+    <div class="bt-dot" id="btDot"></div>
+    <span class="bt-label" id="btLabel">Sin impresora conectada</span>
+    <button class="btn-connect" id="btnConnect" onclick="toggleBluetooth()">Conectar</button>
+  </div>
+
+  <div class="debug" id="debug"></div>
+  <div class="list" id="clientList"></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+function log(msg, error=false) {
+  const d = document.getElementById('debug');
+  d.classList.add('show');
+  const line = document.createElement('div');
+  line.className = error ? 'err' : '';
+  line.textContent = '› ' + msg;
+  d.appendChild(line);
+  d.scrollTop = d.scrollHeight;
+}
+
+const clients = [
+  { code: "5023506", name: "UNISUPER" },
+  { code: "1256801", name: "POLLERIA ISA" },
+];
+
+// Bluetooth state
+let btDevice = null;
+let btChar = null;
+
+// ESC/POS helpers
+const ESC = 0x1B;
+const GS  = 0x1D;
+
+function escpos(name) {
+  const enc = new TextEncoder();
+  const lines = [];
+
+  // Init printer
+  lines.push([ESC, 0x40]);
+  // Center align
+  lines.push([ESC, 0x61, 0x01]);
+  // Double height + width
+  lines.push([GS, 0x21, 0x11]);
+  // Name
+  lines.push(enc.encode(name + '\n'));
+  // Normal size
+  lines.push([GS, 0x21, 0x00]);
+  // Feed and cut
+  lines.push([ESC, 0x64, 0x04]);
+  lines.push([GS, 0x56, 0x41, 0x10]);
+
+  // Flatten to Uint8Array
+  const total = lines.reduce((s, a) => s + a.length, 0);
+  const buf = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of lines) {
+    buf.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return buf;
+}
+
+async function toggleBluetooth() {
+  if (btDevice && btDevice.gatt.connected) {
+    btDevice.gatt.disconnect();
+    btDevice = null;
+    btChar = null;
+    updateBtUI(false);
+    return;
+  }
+  await connectBluetooth();
+}
+
+async function connectBluetooth() {
+  setConnecting();
+  log('Iniciando búsqueda Bluetooth...');
+  try {
+    log('Solicitando dispositivo...');
+    btDevice = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [
+        '000018f0-0000-1000-8000-00805f9b34fb', // common thermal printer
+        '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Microchip ISSC
+        '0000fff0-0000-1000-8000-00805f9b34fb',
+        'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // common BT printer
+      ]
+    });
+
+    btDevice.addEventListener('gattserverdisconnected', () => {
+      btDevice = null; btChar = null;
+      updateBtUI(false);
+      showToast('Impresora desconectada', true);
+    });
+
+    log('Dispositivo: ' + (btDevice.name || 'sin nombre'));
+    log('Conectando GATT...');
+    const server = await btDevice.gatt.connect();
+    log('GATT conectado');
+
+    // Try known services
+    const serviceUUIDs = [
+      '000018f0-0000-1000-8000-00805f9b34fb',
+      '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+      '0000fff0-0000-1000-8000-00805f9b34fb',
+      'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+    ];
+
+    log('Buscando servicios...');
+    let service = null;
+    for (const uuid of serviceUUIDs) {
+      try { service = await server.getPrimaryService(uuid); log('Servicio encontrado: ' + uuid); break; }
+      catch(e) { log('No: ' + uuid.substring(0,8)); }
+    }
+
+    if (!service) {
+      log('Probando getPrimaryServices()...');
+      try {
+        const services = await server.getPrimaryServices();
+        log('Servicios disponibles: ' + services.length);
+        services.forEach(s => log('  ' + s.uuid));
+        service = services[0];
+      } catch(e) {
+        log('Error obteniendo servicios: ' + e.message, true);
+        throw e;
+      }
+    }
+
+    log('Servicio usado: ' + service.uuid);
+    const chars = await service.getCharacteristics();
+    log('Características: ' + chars.length);
+    chars.forEach(c => log('  ' + c.uuid + ' w:' + c.properties.write + ' wwr:' + c.properties.writeWithoutResponse));
+    // Find writable characteristic
+    btChar = chars.find(c =>
+      c.properties.write || c.properties.writeWithoutResponse
+    ) || chars[0];
+
+    log('Característica seleccionada: ' + btChar.uuid);
+    updateBtUI(true, btDevice.name || 'Impresora');
+    showToast('✓ Impresora conectada');
+  } catch (err) {
+    btDevice = null; btChar = null;
+    updateBtUI(false);
+    log('ERROR: ' + err.name + ' - ' + err.message, true);
+    if (err.name !== 'NotFoundError') {
+      showToast('No se pudo conectar', true);
+    }
+  }
+}
+
+async function printClient(name) {
+  if (!btChar) {
+    showToast('Conecta una impresora primero', true);
+    return;
+  }
+  try {
+    const data = escpos(name);
+    const CHUNK = 512;
+    for (let i = 0; i < data.length; i += CHUNK) {
+      const chunk = data.slice(i, i + CHUNK);
+      if (btChar.properties.writeWithoutResponse) {
+        await btChar.writeValueWithoutResponse(chunk);
+      } else {
+        await btChar.writeValue(chunk);
+      }
+    }
+    showToast('✓ Imprimiendo ' + name);
+  } catch (err) {
+    showToast('Error al imprimir', true);
+  }
+}
+
+function setConnecting() {
+  document.getElementById('btDot').className = 'bt-dot connecting';
+  document.getElementById('btLabel').textContent = 'Conectando…';
+  document.getElementById('btLabel').className = 'bt-label';
+  document.getElementById('btnConnect').textContent = '…';
+  document.getElementById('btnConnect').disabled = true;
+}
+
+function updateBtUI(connected, name = '') {
+  const dot   = document.getElementById('btDot');
+  const label = document.getElementById('btLabel');
+  const btn   = document.getElementById('btnConnect');
+  const cards = document.querySelectorAll('.btn-print');
+
+  dot.className   = 'bt-dot' + (connected ? ' connected' : '');
+  label.className = 'bt-label' + (connected ? ' connected' : '');
+  label.textContent = connected ? name : 'Sin impresora conectada';
+  btn.textContent = connected ? 'Desconectar' : 'Conectar';
+  btn.className   = 'btn-connect' + (connected ? ' disconnect' : '');
+  btn.disabled    = false;
+  cards.forEach(b => b.disabled = !connected);
+}
+
+function showToast(msg, error = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (error ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Render clients
+function renderClients() {
+  const list = document.getElementById('clientList');
+  list.innerHTML = clients.map(c => `
+    <div class="card">
+      <span class="client-code">${c.code}</span>
+      <span class="client-name">${c.name}</span>
+      <button class="btn-print" disabled onclick="printClient('${c.name}')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        Imprimir
+      </button>
+    </div>
+  `).join('');
+}
+
+// Check Web Bluetooth support
+if (!navigator.bluetooth) {
+  document.getElementById('noSupport').style.display = 'block';
+}
+
+renderClients();
+</script>
+</body>
+</html>
